@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { chooseBotGesture, predictNext, seededRng, type Difficulty } from '../src/games/hand-cricket/engine/ai.ts';
-import { ALL_GESTURES, isGesture, type Gesture } from '../src/games/hand-cricket/engine/gestures.ts';
+import { chooseBotGesture, predictNext, seededRng, type Difficulty } from '@plyo/engine';
+import { ALL_GESTURES, isGesture, type Gesture } from '@plyo/engine';
 
 describe('bot', () => {
   const levels: Difficulty[] = ['easy', 'medium', 'hard'];
@@ -44,5 +44,16 @@ describe('bot', () => {
     for (let i = 1; i < own.length; i++) if (own[i] === own[i - 1]) repeats++;
     expect(repeats).toBeLessThan(10);
     expect(new Set(own).size).toBeGreaterThan(8);
+  });
+
+  it('bowls for the finger count in count mode', () => {
+    const rng = seededRng(5);
+    const history: Gesture[] = Array(20).fill('01111');
+    let hits = 0;
+    for (let i = 0; i < 1000; i++) {
+      const g = chooseBotGesture('bowl', { opponentHistory: history, ownHistory: [], outMode: 'count' }, 'hard', rng);
+      if (g.split('').filter((c) => c === '1').length === 4) hits++;
+    }
+    expect(hits / 1000).toBeGreaterThan(0.6);
   });
 });

@@ -7,11 +7,11 @@ import {
   target,
   tossWinner,
   type MatchState,
-} from '../src/games/hand-cricket/engine/match.ts';
-import type { Gesture } from '../src/games/hand-cricket/engine/gestures.ts';
+} from '@plyo/engine';
+import type { Gesture, OutMode } from '@plyo/engine';
 
-const start = (overs = 2): MatchState =>
-  reduceMatch(createMatch({ overs, names: ['Ana', 'Bot'] }), {
+const start = (overs = 2, outMode: OutMode = 'exact'): MatchState =>
+  reduceMatch(createMatch({ overs, outMode, names: ['Ana', 'Bot'] }), {
     type: 'toss',
     caller: 0,
     call: 'heads',
@@ -25,7 +25,7 @@ describe('match', () => {
   it('resolves the toss', () => {
     expect(tossWinner(0, 'heads', 'heads')).toBe(0);
     expect(tossWinner(0, 'heads', 'tails')).toBe(1);
-    const s = reduceMatch(createMatch({ overs: 2, names: ['A', 'B'] }), {
+    const s = reduceMatch(createMatch({ overs: 2, outMode: 'exact', names: ['A', 'B'] }), {
       type: 'toss', caller: 1, call: 'tails', coin: 'heads', decision: 'bowl',
     });
     expect(s.toss?.winner).toBe(0);
@@ -93,9 +93,39 @@ describe('match', () => {
   });
 
   it('rejects illegal actions', () => {
-    const fresh = createMatch({ overs: 2, names: ['A', 'B'] });
+    const fresh = createMatch({ overs: 2, outMode: 'exact', names: ['A', 'B'] });
     expect(() => ball(fresh, '00000', '00001')).toThrow();
-    expect(() => createMatch({ overs: 0, names: ['A', 'B'] })).toThrow();
+    expect(() => createMatch({ overs: 0, outMode: 'exact', names: ['A', 'B'] })).toThrow();
+    expect(() => createMatch({ overs: 2, outMode: 'loose' as OutMode, names: ['A', 'B'] })).toThrow(/OUT rule/);
     expect(() => reduceMatch(start(), { type: 'next-innings' })).toThrow();
+  });
+
+  it('applies finger-count mode: same count is out, thumb-only is its own class', () => {
+    let s = start(2, 'count');
+    s = ball(s, '10000', '01000'); // six vs single finger: not out
+    expect(currentInnings(s)?.runs).toBe(6);
+    s = ball(s, '01000', '10000'); // single finger vs thumb: not out
+    expect(currentInnings(s)?.runs).toBe(7);
+    s = ball(s, '01111', '11101'); // same count, different fingers: OUT
+    expect(currentInnings(s)?.out).toBe(true);
+    expect(currentInnings(s)?.runs).toBe(7);
+  });
+
+  it('dismisses a six in count mode only with another thumb', () => {
+    let s = start(2, 'count');
+    s = ball(s, '10000', '10000');
+    expect(s.phase).toBe('innings-break');
+  });
+
+  it('locks the OUT mode for the whole match', () => {
+    let s = start(2, 'exact');
+    expect(Object.isFrozen(s.config)).toBe(true);
+    expect(() => {
+      (s.config as { outMode: OutMode }).outMode = 'count';
+    }).toThrow();
+    s = ball(s, '01111', '11101');
+    s = ball(s, '00011', '00110');
+    expect(currentInnings(s)?.out).toBe(false);
+    expect(s.config.outMode).toBe('exact');
   });
 });

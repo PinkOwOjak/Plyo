@@ -2,11 +2,16 @@
  * Wire protocol between the Hand Cricket client and the multiplayer server.
  * The server is authoritative: it runs the same match reducer as the client
  * and never reveals a player's gesture until both have locked in.
+ *
+ * Rule agreement: the host picks the OUT mode; any change clears both players'
+ * ready flags, so the match only starts once both have readied up under the
+ * mode shown. The mode is then locked for the match (and its rematches).
  */
-import type { Gesture } from '../engine/gestures.ts';
-import type { CoinFace, MatchState, Side, TossDecision } from '../engine/match.ts';
+import type { Gesture } from './gestures.ts';
+import type { CoinFace, MatchState, Side, TossDecision } from './match.ts';
+import type { OutMode } from './rules.ts';
 
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 export const ROOM_CODE_LENGTH = 5;
 export const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const PICK_TIMEOUT_MS = 30_000;
@@ -15,7 +20,8 @@ export const INNINGS_BREAK_MS = 8_000;
 
 export type ClientMsg =
   | { t: 'hello'; v: number; name: string; resume?: { code: string; token: string } }
-  | { t: 'create'; overs: number }
+  | { t: 'create'; overs: number; outMode: OutMode }
+  | { t: 'set-rules'; overs: number; outMode: OutMode }
   | { t: 'join'; code: string }
   | { t: 'ready'; ready: boolean }
   | { t: 'call'; face: CoinFace }
@@ -50,6 +56,8 @@ export interface RoomView {
   you: Side;
   token: string;
   overs: number;
+  /** Proposed by the host in the lobby; locked once the toss starts. */
+  outMode: OutMode;
   players: [PlayerView | null, PlayerView | null];
   stage: RoomStage;
   toss: TossView;

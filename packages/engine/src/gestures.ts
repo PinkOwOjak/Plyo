@@ -81,14 +81,6 @@ export function runsFor(gesture: Gesture): number {
   return extendedCount(gesture);
 }
 
-/**
- * The OUT rule. The batsman is out only when both complete five-bit
- * configurations are identical — never by comparing finger counts.
- */
-export function isOut(batting: Gesture, bowling: Gesture): boolean {
-  return assertGesture(batting) === assertGesture(bowling);
-}
-
 /** All 32 gestures, ordered by number of extended fingers, then thumb-first. */
 export const ALL_GESTURES: readonly Gesture[] = (() => {
   const list: Gesture[] = [];

@@ -1,16 +1,17 @@
 /**
  * Bot opponent for Hand Cricket.
  *
- * The bot only ever sees gestures that have already been revealed. Its
- * function signature has no access to the player's current selection, so it
- * cannot cheat: it picks before (and independently of) the human.
+ * The bot only sees gestures that have already been revealed; its signature
+ * has no access to the player's current selection, so it cannot cheat. It
+ * plays by the same OUT rule mode as the match.
  *
  *  - Easy:   uniform random over all 32 gestures.
  *  - Medium: learns the opponent's habits (overall frequency + what they tend
- *            to play after each gesture) and leans on that, loosely.
+ *            to play after each gesture) and leans on that loosely.
  *  - Hard:   same model, trusted more strongly, and plays the odds as a batter.
  */
 import { ALL_GESTURES, extendedCount, runsFor, type Gesture } from './gestures.ts';
+import { isOutUnder, type OutMode } from './rules.ts';
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type Role = 'bat' | 'bowl';
@@ -21,15 +22,23 @@ export interface BotView {
   opponentHistory: readonly Gesture[];
   /** Gestures the bot itself played earlier, oldest first. */
   ownHistory: readonly Gesture[];
+  /** The match's OUT rule. Defaults to exact. */
+  outMode?: OutMode;
 }
 
 const N = ALL_GESTURES.length;
 const INDEX = new Map(ALL_GESTURES.map((g, i) => [g, i]));
 const COMBOS = [1, 5, 10, 10, 5, 1];
 
-const TUNING: Record<Exclude<Difficulty, 'easy'>, { trust: number; sharpen: number; batTemp: number }> = {
-  medium: { trust: 0.55, sharpen: 1.6, batTemp: 1.4 },
-  hard: { trust: 0.85, sharpen: 3, batTemp: 0.75 },
+const TUNING: Record<Exclude<Difficulty, 'easy'>, { trust: number; sharpen: number; temp: number }> = {
+  medium: { trust: 0.55, sharpen: 1.6, temp: 1.3 },
+  hard: { trust: 0.85, sharpen: 3, temp: 0.6 },
+};
+
+/** outMatrix[mode][b][w] = 1 if batting gesture b is out to bowling gesture w. */
+const OUT_MATRIX: Record<OutMode, number[][]> = {
+  exact: ALL_GESTURES.map((b) => ALL_GESTURES.map((w) => (isOutUnder('exact', b, w) ? 1 : 0))),
+  count: ALL_GESTURES.map((b) => ALL_GESTURES.map((w) => (isOutUnder('count', b, w) ? 1 : 0))),
 };
 
 function pick(weights: number[], rng: Rng): Gesture {
@@ -100,21 +109,27 @@ function varietyPenalty(own: readonly Gesture[]): number[] {
 export function chooseBotGesture(role: Role, view: BotView, difficulty: Difficulty, rng: Rng = Math.random): Gesture {
   if (difficulty === 'easy') return ALL_GESTURES[Math.floor(rng() * N) % N];
 
-  const { trust, sharpen, batTemp } = TUNING[difficulty];
+  const mode = view.outMode ?? 'exact';
+  const out = OUT_MATRIX[mode];
+  const { trust, sharpen, temp } = TUNING[difficulty];
   const predicted = predictNext(view.opponentHistory);
   const variety = varietyPenalty(view.ownHistory);
 
   if (role === 'bowl') {
-    // Try to copy the batter's exact hand: weight by predicted probability.
-    const weights = predicted.map((p, i) => ((1 - trust) / N + trust * Math.pow(p, sharpen)) * variety[i]);
+    // Chance that bowling w dismisses the batter, given what we expect them to play.
+    const hit = ALL_GESTURES.map((_, w) => predicted.reduce((s, p, b) => s + p * out[b][w], 0));
+    const weights = hit.map((h, i) => ((1 - trust) / N + trust * Math.pow(h, sharpen)) * variety[i]);
     return pick(weights, rng);
   }
 
-  // Batting: expected runs, discounted by the chance the bowler matches us.
-  const weights = ALL_GESTURES.map((g, i) => {
-    const pOut = predicted[i];
-    const ev = runsFor(g) * (1 - pOut * N * trust * 0.5) - pOut * N * trust * 2;
-    return Math.exp(ev / (batTemp * 2)) * variety[i];
+  // Batting: expected runs, discounted by the chance the bowler gets us out.
+  const bowlerGuess = predicted;
+  const uniformOut = (b: number) => out[b].reduce((s, x) => s + x, 0) / N;
+  const weights = ALL_GESTURES.map((g, b) => {
+    const learned = bowlerGuess.reduce((s, p, w) => s + p * out[b][w], 0);
+    const pOut = (1 - trust) * uniformOut(b) + trust * learned;
+    const utility = runsFor(g) * (1 - pOut) - 9 * pOut;
+    return Math.exp(utility / temp) * variety[b];
   });
   return pick(weights, rng);
 }

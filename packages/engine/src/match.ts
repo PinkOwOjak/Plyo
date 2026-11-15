@@ -3,9 +3,11 @@
  *
  * Format: two innings, one wicket each. An innings ends when the batsman is
  * out, when the overs run out, or (second innings only) when the target is
- * reached. The same reducer runs in the browser and on the multiplayer server.
+ * reached. The OUT rule mode is fixed when the match is created and cannot
+ * change afterwards. The same reducer runs in the apps and on the server.
  */
-import { assertGesture, isOut, runsFor, type Gesture } from './gestures.ts';
+import { assertGesture, runsFor, type Gesture } from './gestures.ts';
+import { isOutMode, isOutUnder, type OutMode } from './rules.ts';
 
 export type Side = 0 | 1;
 export type CoinFace = 'heads' | 'tails';
@@ -18,6 +20,8 @@ export const MAX_OVERS = 20;
 export interface MatchConfig {
   overs: number;
   names: [string, string];
+  /** Locked for the whole match. */
+  outMode: OutMode;
 }
 
 export interface Ball {
@@ -73,7 +77,8 @@ export function createMatch(config: MatchConfig): MatchState {
   if (!Number.isInteger(config.overs) || config.overs < 1 || config.overs > MAX_OVERS) {
     throw new Error(`Overs must be a whole number from 1 to ${MAX_OVERS}`);
   }
-  return { config, phase: 'toss', toss: null, innings: [], result: null };
+  if (!isOutMode(config.outMode)) throw new Error('Choose an OUT rule: exact or count');
+  return { config: Object.freeze({ ...config }), phase: 'toss', toss: null, innings: [], result: null };
 }
 
 export function tossWinner(caller: Side, call: CoinFace, coin: CoinFace): Side {
@@ -141,7 +146,7 @@ export function reduceMatch(state: MatchState, action: MatchAction): MatchState 
       if (state.phase !== 'playing') throw new Error('No innings is in progress');
       const batting = assertGesture(action.batting);
       const bowling = assertGesture(action.bowling);
-      const out = isOut(batting, bowling);
+      const out = isOutUnder(state.config.outMode, batting, bowling);
       const runs = out ? 0 : runsFor(batting);
       const cur = currentInnings(state)!;
       const next: Innings = {
@@ -168,7 +173,7 @@ export function reduceMatch(state: MatchState, action: MatchAction): MatchState 
 
 /** A short line describing the last ball, for commentary and toasts. */
 export function describeBall(ball: Ball): string {
-  if (ball.out) return 'Out! Exact same hand';
+  if (ball.out) return 'Out';
   if (ball.runs === 6) return 'Six! Thumb only';
   if (ball.runs === 0) return 'Dot ball';
   return `${ball.runs} run${ball.runs === 1 ? '' : 's'}`;

@@ -5,12 +5,11 @@ import {
   extendedCount,
   fromFingerStates,
   isGesture,
-  isOut,
   runsFor,
   toFingerStates,
   toggleFinger,
   type Gesture,
-} from '../src/games/hand-cricket/engine/gestures.ts';
+} from '@plyo/engine';
 
 const SPEC: Record<number, string[]> = {
   0: ['00000'],
@@ -62,31 +61,5 @@ describe('scoring', () => {
 
   it('scores every gesture by extended count except thumb-only', () => {
     for (const g of ALL_GESTURES) expect(runsFor(g)).toBe(g === '10000' ? 6 : extendedCount(g));
-  });
-});
-
-describe('OUT rule', () => {
-  it('is NOT out when finger counts match but configurations differ', () => {
-    expect(isOut('01111', '11101')).toBe(false);
-    expect(isOut('10000', '01000')).toBe(false);
-  });
-
-  it('is out when configurations are identical', () => {
-    expect(isOut('01111', '01111')).toBe(true);
-  });
-
-  it('is out exactly on the 32 diagonal pairs of all 1024 pairs', () => {
-    let outs = 0;
-    for (const a of ALL_GESTURES)
-      for (const b of ALL_GESTURES) {
-        const o = isOut(a, b);
-        if (o) outs++;
-        expect(o).toBe(a === b);
-      }
-    expect(outs).toBe(32);
-  });
-
-  it('rejects invalid gestures', () => {
-    expect(() => isOut('0111' as Gesture, '01111')).toThrow();
   });
 });
