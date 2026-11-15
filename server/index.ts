@@ -9,12 +9,11 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
-import type { Side } from '../src/games/hand-cricket/engine/match.ts';
-import { PROTOCOL_VERSION, normaliseCode, type ClientMsg, type ServerMsg } from '../src/games/hand-cricket/net/protocol.ts';
+import { PROTOCOL_VERSION, normaliseCode, type ClientMsg, type ServerMsg, type Side } from '@plyo/engine';
 import { RoomError, RoomManager, type Connection, type Room } from './rooms.ts';
 
 const PORT = Number(process.env.PORT ?? process.env.PLYO_SERVER_PORT ?? 8787);
-const DIST = resolve(process.cwd(), 'dist');
+const DIST = resolve(process.cwd(), process.env.PLYO_DIST ?? 'apps/web/dist');
 const ORIGINS = (process.env.PLYO_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const MAX_MESSAGE_BYTES = 2048;
 
@@ -112,12 +111,17 @@ wss.on('connection', (socket: WebSocket & { alive?: boolean }) => {
       if (!greeted) throw new RoomError('bad-request', 'Say hello first.');
       if (msg.t === 'create' || msg.t === 'join') {
         if (seat) rooms.leave(seat.room, seat.side);
-        seat = msg.t === 'create' ? rooms.create(name, Number(msg.overs), conn) : rooms.join(normaliseCode(String(msg.code)), name, conn);
+        seat =
+          msg.t === 'create'
+            ? rooms.create(name, msg.overs, msg.outMode, conn)
+            : rooms.join(normaliseCode(String(msg.code)), name, conn);
         return;
       }
       if (!seat) throw new RoomError('not-allowed', 'Join a room first.');
       const { room, side } = seat;
       switch (msg.t) {
+        case 'set-rules':
+          return rooms.setRules(room, side, msg.overs, msg.outMode);
         case 'ready':
           return rooms.setReady(room, side, !!msg.ready);
         case 'call':

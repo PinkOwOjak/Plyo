@@ -5,8 +5,8 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import WebSocket from 'ws';
-import type { ClientMsg, RoomView, ServerMsg } from '../src/games/hand-cricket/net/protocol.ts';
-import { PROTOCOL_VERSION, ballKey } from '../src/games/hand-cricket/net/protocol.ts';
+import type { ClientMsg, RoomView, ServerMsg } from '@plyo/engine';
+import { PROTOCOL_VERSION, ballKey } from '@plyo/engine';
 
 const PORT = 18000 + Math.floor(Math.random() * 1000);
 let server: ChildProcess;
@@ -74,8 +74,10 @@ describe('multiplayer server', () => {
     await Promise.all([a.open(), b.open()]);
     a.send({ t: 'hello', v: PROTOCOL_VERSION, name: 'Ana' });
     b.send({ t: 'hello', v: PROTOCOL_VERSION, name: 'Ben' });
-    a.send({ t: 'create', overs: 1 });
-    const created = await a.room(() => true);
+    a.send({ t: 'create', overs: 1, outMode: 'exact' });
+    const created0 = await a.room(() => true);
+    expect(created0.outMode).toBe('exact');
+    const created = created0;
     b.send({ t: 'join', code: created.code.toLowerCase() });
     await b.room((r) => r.players[0]?.name === 'Ana');
     a.send({ t: 'ready', ready: true });

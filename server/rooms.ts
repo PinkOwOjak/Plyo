@@ -3,17 +3,21 @@
  * so it can be unit-tested without sockets.
  */
 import { randomBytes, randomInt } from 'node:crypto';
-import { ALL_GESTURES, isGesture, type Gesture } from '../src/games/hand-cricket/engine/gestures.ts';
 import {
+  ALL_GESTURES,
   MAX_OVERS,
   createMatch,
+  isGesture,
+  isOutMode,
   other,
   reduceMatch,
   type CoinFace,
+  type Gesture,
   type MatchState,
+  type OutMode,
   type Side,
   type TossDecision,
-} from '../src/games/hand-cricket/engine/match.ts';
+} from '@plyo/engine';
 import {
   INNINGS_BREAK_MS,
   PICK_TIMEOUT_MS,
@@ -25,7 +29,7 @@ import {
   type RoomView,
   type ServerMsg,
   type TossView,
-} from '../src/games/hand-cricket/net/protocol.ts';
+} from '@plyo/engine';
 
 export interface Connection {
   send(msg: ServerMsg): void;
@@ -45,6 +49,7 @@ interface Player {
 export interface Room {
   code: string;
   overs: number;
+  outMode: OutMode;
   players: [Player | null, Player | null];
   stage: RoomView['stage'];
   toss: TossView;
@@ -109,13 +114,21 @@ export class RoomManager {
     };
   }
 
-  create(name: string, overs: number, conn: Connection): { room: Room; side: Side } {
+  private checkRules(overs: unknown, outMode: unknown): { overs: number; outMode: OutMode } {
+    if (typeof overs !== 'number' || !Number.isInteger(overs) || overs < 1 || overs > MAX_OVERS)
+      throw new RoomError('bad-request', 'Choose between 1 and 20 overs.');
+    if (!isOutMode(outMode)) throw new RoomError('bad-request', 'Choose an OUT rule: exact match or finger count.');
+    return { overs, outMode };
+  }
+
+  create(name: string, overs: unknown, outMode: unknown, conn: Connection): { room: Room; side: Side } {
     if (this.rooms.size >= MAX_ROOMS) throw new RoomError('server-busy', 'The server is full right now. Try again soon.');
-    if (!Number.isInteger(overs) || overs < 1 || overs > MAX_OVERS) throw new RoomError('bad-request', 'Choose between 1 and 20 overs.');
+    const rules = this.checkRules(overs, outMode);
     const code = this.newCode();
     const room: Room = {
       code,
-      overs,
+      overs: rules.overs,
+      outMode: rules.outMode,
       players: [this.newPlayer(name, conn), null],
       stage: 'lobby',
       toss: { caller: 1, call: null, coin: null, winner: null, decision: null },
@@ -153,13 +166,27 @@ export class RoomManager {
     return { room, side: side as Side };
   }
 
+  /** Host changes the proposed rules in the lobby. Both players must ready up again. */
+  setRules(room: Room, side: Side, overs: unknown, outMode: unknown) {
+    if (room.stage !== 'lobby') throw new RoomError('not-allowed', 'Rules are locked once the match starts.');
+    if (side !== 0) throw new RoomError('not-allowed', 'Only the room host can change the rules.');
+    const rules = this.checkRules(overs, outMode);
+    if (rules.overs === room.overs && rules.outMode === room.outMode) return;
+    room.overs = rules.overs;
+    room.outMode = rules.outMode;
+    room.players.forEach((p) => {
+      if (p) p.ready = false;
+    });
+    this.broadcast(room);
+  }
+
   setReady(room: Room, side: Side, ready: boolean) {
     if (room.stage !== 'lobby') return;
     room.players[side]!.ready = ready;
     if (room.players.every((p) => p?.ready)) {
       room.stage = 'toss';
       room.toss = { caller: room.toss.caller, call: null, coin: null, winner: null, decision: null };
-      room.match = createMatch({ overs: room.overs, names: [room.players[0]!.name, room.players[1]!.name] });
+      room.match = createMatch({ overs: room.overs, outMode: room.outMode, names: [room.players[0]!.name, room.players[1]!.name] });
       room.seq = 0;
     }
     this.broadcast(room);
@@ -272,7 +299,7 @@ export class RoomManager {
       });
       room.stage = 'toss';
       room.toss = { caller: other(room.toss.caller), call: null, coin: null, winner: null, decision: null };
-      room.match = createMatch({ overs: room.overs, names: [room.players[0]!.name, room.players[1]!.name] });
+      room.match = createMatch({ overs: room.overs, outMode: room.outMode, names: [room.players[0]!.name, room.players[1]!.name] });
       room.seq = 0;
       room.deadline = null;
     }
@@ -356,6 +383,7 @@ export class RoomManager {
       you: side,
       token: room.players[side]!.token,
       overs: room.overs,
+      outMode: room.outMode,
       players: room.players.map((p) =>
         p
           ? { name: p.name, connected: !!p.conn, ready: p.ready, picked: !!p.pick, wantsRematch: p.wantsRematch }
