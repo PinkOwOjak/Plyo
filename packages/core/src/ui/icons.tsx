@@ -35,3 +35,21 @@ export const IconHelp = (p: SVGProps<SVGSVGElement>) => (
 export const IconCopy = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a1 1 0 011-1h10" /></svg>
 );
+export const IconLock = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><rect x="5" y="11" width="14" height="9" rx="1" /><path d="M8 11V8a4 4 0 018 0v3" /></svg>
+);
+export const IconClose = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><path d="M6 6l12 12M18 6L6 18" /></svg>
+);
+export const IconGlobe = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18" /></svg>
+);
+export const IconUsers = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><circle cx="9" cy="8" r="3.5" /><path d="M3 20c.8-3.5 3.2-5 6-5s5.2 1.5 6 5" /><path d="M16 4.5a3.5 3.5 0 010 7M18 15c1.6.6 2.6 2.2 3 5" /></svg>
+);
+export const IconBot = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><rect x="4" y="7" width="16" height="12" rx="2" /><path d="M12 7V4M9 13h.01M15 13h.01M9 16h6" /></svg>
+);
+export const IconHome = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" /></svg>
+);

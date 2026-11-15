@@ -2,16 +2,23 @@
  * Browser client for the multiplayer server, with automatic reconnection and
  * seat resumption (a dropped connection rejoins the same match).
  */
-import { PROTOCOL_VERSION, type ClientMsg, type RoomView, type ServerMsg } from './protocol.ts';
-import { prefs } from '../../../platform/prefs.ts';
+import { PROTOCOL_VERSION, type ClientMsg, type RoomView, type ServerMsg } from '@plyo/engine';
+import { prefs } from './prefs.ts';
 
 export type ConnStatus = 'connecting' | 'open' | 'reconnecting' | 'offline';
 
 const SEAT_KEY = 'plyo.online.seat';
 
+/** Set by an app that has no same-origin server (e.g. the native mobile shell). */
+let defaultServer: string | null = null;
+export function setDefaultServerUrl(url: string | null) {
+  defaultServer = url;
+}
+
 export function serverUrl(): string {
   const custom = prefs.get().serverUrl;
   if (custom) return custom;
+  if (defaultServer) return defaultServer;
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   return `${proto}://${location.host}/ws`;
 }

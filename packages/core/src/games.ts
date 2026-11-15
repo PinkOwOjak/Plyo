@@ -1,57 +1,46 @@
 /**
- * Game registry. The lobby only knows this metadata; each game's code lives
- * in its own module and is loaded on demand.
+ * Game catalogue: metadata only. Each app decides how to present and load a
+ * game; no game logic lives here.
  */
-import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
-import type { Route } from './router.ts';
+export type PlayerCount = 1 | 2;
 
-export interface GameProps {
-  route: Route;
-}
-
-export interface GameEntry {
+export interface GameMeta {
   id: string;
   title: string;
   pitch: string;
-  modes: string[];
+  /** Ways to play, used by the lobby filters. */
+  players: { solo: boolean; sameDevice: boolean; online: boolean };
   status: 'playable' | 'coming-soon';
-  accent: string;
-  Component?: LazyExoticComponent<ComponentType<GameProps>>;
 }
 
-export const GAMES: GameEntry[] = [
+export const GAMES: GameMeta[] = [
   {
     id: 'hand-cricket',
     title: 'Hand Cricket',
-    pitch: 'Show fingers, score runs. Match your opponent’s exact hand and you’re out.',
-    modes: ['vs Bot', 'Pass & play', 'Online'],
+    pitch: 'Raise fingers to score runs. Match the batter’s hand to take the wicket.',
+    players: { solo: true, sameDevice: true, online: true },
     status: 'playable',
-    accent: '#c83a2c',
-    Component: lazy(() => import('../games/hand-cricket/HandCricketGame.tsx')),
   },
   {
     id: 'odd-even',
     title: 'Odd or Even',
-    pitch: 'Call odd or even, throw fingers together, and win the toss of the century.',
-    modes: ['vs Bot', 'Online'],
+    pitch: 'Call it, throw fingers together, and see who reads the other better.',
+    players: { solo: true, sameDevice: true, online: true },
     status: 'coming-soon',
-    accent: '#f4c54a',
   },
   {
-    id: 'rps-duel',
+    id: 'paper-duel',
     title: 'Paper Duel',
-    pitch: 'Rock, paper, scissors with streaks, power-ups and best-of-seven duels.',
-    modes: ['vs Bot', 'Online'],
+    pitch: 'Rock, paper, scissors with streaks and best-of-seven duels.',
+    players: { solo: true, sameDevice: true, online: true },
     status: 'coming-soon',
-    accent: '#5aa7d6',
   },
   {
     id: 'dots',
     title: 'Dots & Boxes',
-    pitch: 'Draw lines, close boxes, steal the board on a single turn.',
-    modes: ['Pass & play'],
+    pitch: 'Draw lines, close boxes, steal the board in a single turn.',
+    players: { solo: false, sameDevice: true, online: false },
     status: 'coming-soon',
-    accent: '#8fbf6a',
   },
 ];
 

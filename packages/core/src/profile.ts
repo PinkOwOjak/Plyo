@@ -2,6 +2,8 @@ import { createStore } from './store.ts';
 
 export type StatMode = 'bot' | 'local' | 'online';
 
+/** Results in pass & play / face-to-face count from player one's side (the device owner). */
+
 export interface ModeStats {
   played: number;
   won: number;
