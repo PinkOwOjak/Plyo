@@ -3,9 +3,17 @@ node_modules/
 
 # Build output
 dist/
+**/dist/
 coverage/
 *.tsbuildinfo
-node_modules/.tmp/
+
+# Native build output (project files are committed; build products are not)
+apps/mobile/android/app/build/
+apps/mobile/android/build/
+apps/mobile/android/.gradle/
+apps/mobile/android/local.properties
+apps/mobile/ios/App/build/
+apps/mobile/ios/App/Pods/
 
 # Environment and secrets — never commit
 .env
@@ -13,11 +21,11 @@ node_modules/.tmp/
 !.env.example
 *.pem
 *.key
+*.keystore
+*.jks
 
 # Logs
 npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
 *.log
 
 # Editors and OS
@@ -28,6 +36,9 @@ pnpm-debug.log*
 Thumbs.db
 desktop.ini
 
-# Local tooling artefacts
+# Local artefacts
 screenshots/
 *.bundle
+
+# Reference screenshots of a third-party app (inspiration only; not ours to publish)
+refs images/
