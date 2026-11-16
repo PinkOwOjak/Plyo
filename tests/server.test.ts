@@ -5,8 +5,8 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import WebSocket from 'ws';
-import type { ClientMsg, RoomView, ServerMsg } from '../src/games/hand-cricket/net/protocol.ts';
-import { PROTOCOL_VERSION, ballKey } from '../src/games/hand-cricket/net/protocol.ts';
+import type { ClientMsg, RoomView, ServerMsg } from '@plyo/engine';
+import { PROTOCOL_VERSION, ballKey } from '@plyo/engine';
 
 const PORT = 18000 + Math.floor(Math.random() * 1000);
 let server: ChildProcess;
@@ -39,8 +39,14 @@ class Client {
     this.ws = new WebSocket(`ws://localhost:${PORT}/ws`);
     this.ws.on('message', (d) => {
       const m = JSON.parse(String(d)) as ServerMsg;
-      this.msgs.push(m);
-      this.waiters = this.waiters.filter((w) => (w.pred(m) ? (w.resolve(m), false) : true));
+      // A message goes to the first waiter that wants it, otherwise into the queue — never both.
+      const w = this.waiters.find((x) => x.pred(m));
+      if (w) {
+        this.waiters = this.waiters.filter((x) => x !== w);
+        w.resolve(m);
+      } else {
+        this.msgs.push(m);
+      }
     });
   }
   open() {
@@ -74,8 +80,10 @@ describe('multiplayer server', () => {
     await Promise.all([a.open(), b.open()]);
     a.send({ t: 'hello', v: PROTOCOL_VERSION, name: 'Ana' });
     b.send({ t: 'hello', v: PROTOCOL_VERSION, name: 'Ben' });
-    a.send({ t: 'create', overs: 1 });
-    const created = await a.room(() => true);
+    a.send({ t: 'create', overs: 1, outMode: 'exact' });
+    const created0 = await a.room(() => true);
+    expect(created0.outMode).toBe('exact');
+    const created = created0;
     b.send({ t: 'join', code: created.code.toLowerCase() });
     await b.room((r) => r.players[0]?.name === 'Ana');
     a.send({ t: 'ready', ready: true });
@@ -91,18 +99,18 @@ describe('multiplayer server', () => {
     // Ball 1: same count, different fingers → runs, not out.
     a.send({ t: 'pick', gesture: '01111', ball: ballKey(room.match!) });
     b.send({ t: 'pick', gesture: '11101', ball: ballKey(room.match!) });
-    const r1 = (await b.next((m) => m.t === 'reveal')) as Extract<ServerMsg, { t: 'reveal' }>;
+    const r1 = (await b.next((m) => m.t === 'reveal' && m.seq === 1)) as Extract<ServerMsg, { t: 'reveal' }>;
     expect(r1.gestures).toEqual(['01111', '11101']);
     expect(r1.match.innings[0].runs).toBe(4);
     expect(r1.match.innings[0].out).toBe(false);
-    const r1a = (await a.next((m) => m.t === 'reveal')) as Extract<ServerMsg, { t: 'reveal' }>;
+    const r1a = (await a.next((m) => m.t === 'reveal' && m.seq === 1)) as Extract<ServerMsg, { t: 'reveal' }>;
     expect(r1a.seq).toBe(1);
 
     // Ball 2: identical hands → out.
     room = await a.room((r) => r.seq === 1);
     a.send({ t: 'pick', gesture: '00111', ball: ballKey(room.match!) });
     b.send({ t: 'pick', gesture: '00111', ball: ballKey(room.match!) });
-    const r2 = (await a.next((m) => m.t === 'reveal')) as Extract<ServerMsg, { t: 'reveal' }>;
+    const r2 = (await a.next((m) => m.t === 'reveal' && m.seq === 2)) as Extract<ServerMsg, { t: 'reveal' }>;
     expect(r2.match.phase).toBe('innings-break');
 
     // Bad input is rejected with a clear error.

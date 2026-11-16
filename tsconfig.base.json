@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@plyo/engine": ["./packages/engine/src/index.ts"],
+      "@plyo/hand3d": ["./packages/hand3d/src/index.ts"],
+      "@plyo/core": ["./packages/core/src/index.ts"],
+      "@plyo/core/arena": ["./packages/core/src/arena.ts"],
+      "@plyo/tokens/*": ["./packages/tokens/src/*"],
+      "@plyo/hand3d/skinTones": ["./packages/hand3d/src/skinTones.ts"]
+    }
+  }
+}

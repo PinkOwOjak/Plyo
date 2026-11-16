@@ -1,26 +1,38 @@
 {
   "name": "plyo",
   "private": true,
-  "version": "0.1.0",
-  "description": "Plyo — a hub of light casual games. First game: Hand Cricket with a 3D hand.",
+  "version": "0.2.0",
+  "description": "Plyo: quick head-to-head casual games. First game: Hand Cricket with a rigged 3D hand. Web app, mobile app (Capacitor) and multiplayer server.",
   "type": "module",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "dev": "concurrently -k -n web,server -c auto \"vite\" \"npm:server:dev\"",
-    "dev:web": "vite",
-    "server:dev": "tsx watch server/index.ts",
+    "dev": "concurrently -k -n web,server -c auto \"npm:dev:web\" \"npm:server:dev\"",
+    "dev:web": "vite --config apps/web/vite.config.ts",
+    "dev:mobile": "concurrently -k -n mobile,server -c auto \"vite --config apps/mobile/vite.config.ts\" \"npm:server:dev\"",
     "server": "tsx server/index.ts",
-    "build": "tsc -b && vite build",
-    "start": "npm run build && cross-env NODE_ENV=production tsx server/index.ts",
-    "preview": "vite preview",
+    "server:dev": "tsx watch server/index.ts",
+    "build": "tsc -b && npm run build:web && npm run build:mobile",
+    "build:web": "vite build --config apps/web/vite.config.ts",
+    "build:mobile": "vite build --config apps/mobile/vite.config.ts",
+    "start": "npm run build:web && cross-env NODE_ENV=production tsx server/index.ts",
+    "mobile:sync": "npm run build:mobile && cd apps/mobile && cap sync",
+    "mobile:android": "npm run mobile:sync && cd apps/mobile && cap open android",
+    "mobile:ios": "npm run mobile:sync && cd apps/mobile && cap open ios",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "visual": "node scripts/visual-check.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.6.2",
+    "@capacitor/screen-orientation": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
     "@fontsource-variable/big-shoulders-display": "^5.3.0",
     "@fontsource-variable/instrument-sans": "^5.3.0",
     "react": "^19.3.1",
@@ -30,6 +42,7 @@
     "ws": "^8.23.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
@@ -42,6 +55,7 @@
     "eslint": "^10.15.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.14.0",
+    "playwright-core": "^1.65.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.72.2",
     "vite": "^8.3.8",

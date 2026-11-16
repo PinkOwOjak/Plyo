@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { RoomManager, RoomError, type Clock, type Connection } from '../server/rooms.ts';
-import type { RoomView, ServerMsg } from '../src/games/hand-cricket/net/protocol.ts';
-import { ballKey, PICK_TIMEOUT_MS, RECONNECT_GRACE_MS } from '../src/games/hand-cricket/net/protocol.ts';
+import type { OutMode, RoomView, ServerMsg } from '@plyo/engine';
+import { ballKey, PICK_TIMEOUT_MS, RECONNECT_GRACE_MS } from '@plyo/engine';
 
 class FakeClock implements Clock {
   t = 0;
@@ -41,12 +41,12 @@ class Conn implements Connection {
   }
 }
 
-function setup(overs = 1, coin = 0.1) {
+function setup(overs = 1, coin = 0.1, outMode: OutMode = 'exact') {
   const clock = new FakeClock();
   const mgr = new RoomManager(clock, () => coin);
   const a = new Conn();
   const b = new Conn();
-  const { room } = mgr.create('Ana', overs, a);
+  const { room } = mgr.create('Ana', overs, outMode, a);
   mgr.join(room.code, 'Ben', b);
   return { clock, mgr, a, b, room };
 }
@@ -175,5 +175,30 @@ describe('rooms', () => {
     expect(s.a.room.players[1]).toBeNull();
     s.mgr.leave(s.room, 0);
     expect(s.mgr.rooms.has(s.room.code)).toBe(false);
+  });
+
+  it('host proposes rules, changes clear ready flags, and rules lock at the toss', () => {
+    const s = setup(2);
+    expect(s.b.room.outMode).toBe('exact');
+    s.mgr.setReady(s.room, 1, true);
+    expect(() => s.mgr.setRules(s.room, 1, 2, 'count')).toThrow(/host/);
+    s.mgr.setRules(s.room, 0, 5, 'count');
+    expect(s.b.room.outMode).toBe('count');
+    expect(s.b.room.overs).toBe(5);
+    expect(s.b.room.players[1]?.ready).toBe(false);
+    expect(() => s.mgr.setRules(s.room, 0, 5, 'sideways')).toThrow(/OUT rule/);
+    s.mgr.setReady(s.room, 0, true);
+    s.mgr.setReady(s.room, 1, true);
+    expect(s.a.room.match?.config.outMode).toBe('count');
+    expect(() => s.mgr.setRules(s.room, 0, 2, 'exact')).toThrow(/locked/);
+  });
+
+  it('plays count mode on the server', () => {
+    const s = setup(1, 0.1, 'count');
+    toMatch(s);
+    const k = ballKey(s.room.match!);
+    s.mgr.pick(s.room, 0, '01111', k);
+    s.mgr.pick(s.room, 1, '11101', k);
+    expect(s.room.match?.innings[0].out).toBe(true);
   });
 });

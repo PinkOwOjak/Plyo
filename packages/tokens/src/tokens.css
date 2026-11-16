@@ -1,0 +1,406 @@
+/* Plyo design system — shared by the web and mobile apps.
+   Identity: a floodlit broadcast package. Deep pavilion slate, cricket-white
+   type, ball-leather red for actions only, scoreboard gold for scores only.
+   Sharp geometry with angled cuts; condensed display type for numbers. */
+
+:root {
+  /* Colour */
+  --ink-900: #0f1a21;
+  --ink-850: #132029;
+  --ink-800: #172731;
+  --ink-700: #1f3340;
+  --ink-600: #2b4453;
+  --line: rgba(241, 239, 231, 0.1);
+  --line-strong: rgba(241, 239, 231, 0.22);
+  --chalk: #f1efe7;
+  --chalk-2: #b4bfc4;
+  --chalk-3: #7f8f97;
+  --red: #d23a2c;
+  --red-hi: #e44a3b;
+  --red-lo: #a52a1f;
+  --gold: #e3b04b;
+  --turf: #24503a;
+  --p1: #d23a2c;
+  --p2: #4fa3c7;
+  --ok: #6cc28a;
+
+  /* Type */
+  --font-display: 'Big Shoulders Display Variable', 'Arial Narrow', sans-serif;
+  --font-ui: 'Instrument Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --t-xs: 0.75rem;
+  --t-sm: 0.875rem;
+  --t-md: 1rem;
+  --t-lg: 1.25rem;
+  --t-xl: 1.6rem;
+  --t-2xl: 2.2rem;
+  --t-3xl: 3.2rem;
+  --t-4xl: 4.6rem;
+
+  /* Space (4px base) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* Shape: sharp by default; the cut is the brand mark. */
+  --r-1: 2px;
+  --r-2: 4px;
+  --cut: 14px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.9, 0.25, 1);
+  --ease-snap: cubic-bezier(0.3, 1.4, 0.5, 1);
+  --d-fast: 120ms;
+  --d-med: 220ms;
+  --d-slow: 420ms;
+
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ink-900);
+  color: var(--chalk);
+  font-family: var(--font-ui);
+  font-size: var(--t-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: 0.005em;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.dim {
+  color: var(--chalk-2);
+}
+
+.faint {
+  color: var(--chalk-3);
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  --h: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: var(--h);
+  padding: 0 var(--s-5);
+  border: 0;
+  border-radius: var(--r-1);
+  font-weight: 650;
+  font-size: var(--t-md);
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  transition: background-color var(--d-fast), transform var(--d-fast) var(--ease-out), opacity var(--d-fast);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Primary: solid leather red with the angled broadcast cut. */
+.btn--primary {
+  background: var(--red);
+  color: #fff7f2;
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--cut)) 100%, 0 100%);
+  padding-right: calc(var(--s-5) + var(--cut) * 0.6);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--red-hi);
+}
+
+.btn--line {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--chalk);
+}
+
+.btn--line:hover:not(:disabled) {
+  background: rgba(241, 239, 231, 0.06);
+}
+
+.btn--quiet {
+  background: rgba(241, 239, 231, 0.06);
+  color: var(--chalk);
+}
+
+.btn--quiet:hover:not(:disabled) {
+  background: rgba(241, 239, 231, 0.1);
+}
+
+.btn--lg {
+  --h: 56px;
+  font-size: var(--t-lg);
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--r-1);
+  background: transparent;
+  color: var(--chalk);
+  text-decoration: none;
+}
+
+.icon-btn:hover {
+  background: rgba(241, 239, 231, 0.08);
+}
+
+.icon-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ---------- Choice controls ---------- */
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-1);
+}
+
+.seg button {
+  min-height: 40px;
+  min-width: 48px;
+  padding: 0 var(--s-4);
+  border: 0;
+  background: transparent;
+  color: var(--chalk-2);
+  font-weight: 600;
+  border-right: 1px solid var(--line);
+}
+
+.seg button:last-child {
+  border-right: 0;
+}
+
+.seg button[aria-checked='true'] {
+  background: var(--chalk);
+  color: var(--ink-900);
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 48px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--r-1);
+  background: var(--ink-600);
+  transition: background-color var(--d-med);
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 1px;
+  background: var(--chalk);
+  transition: transform var(--d-med) var(--ease-out);
+}
+
+.switch[aria-checked='true'] {
+  background: var(--red);
+}
+
+.switch[aria-checked='true']::after {
+  transform: translateX(20px);
+}
+
+.input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 var(--s-4);
+  border: 0;
+  border-bottom: 2px solid var(--line-strong);
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.18);
+  font-size: var(--t-lg);
+}
+
+.input:focus {
+  outline: none;
+  border-bottom-color: var(--gold);
+}
+
+/* ---------- Scoreboard digits ---------- */
+.digits {
+  display: inline-flex;
+  gap: 2px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.digit {
+  display: inline-grid;
+  place-items: center;
+  min-width: 0.78em;
+  padding: 0.06em 0.08em 0.02em;
+  background: #0a1318;
+  color: var(--gold);
+  border-radius: 1px;
+  position: relative;
+}
+
+.digit::after {
+  content: '';
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.digit--flip {
+  animation: digit-flip 0.4s var(--ease-out);
+}
+
+@keyframes digit-flip {
+  from {
+    transform: perspective(200px) rotateX(-90deg);
+    filter: brightness(1.8);
+  }
+}
+
+/* ---------- Gesture glyph (five bars, thumb first) ---------- */
+.glyph {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 20px;
+}
+
+.glyph i {
+  width: 4px;
+  height: 6px;
+  background: var(--ink-600);
+}
+
+.glyph i.on {
+  background: var(--chalk);
+}
+
+.glyph i.on:nth-child(1) {
+  height: 10px;
+}
+.glyph i.on:nth-child(2) {
+  height: 16px;
+}
+.glyph i.on:nth-child(3) {
+  height: 20px;
+}
+.glyph i.on:nth-child(4) {
+  height: 17px;
+}
+.glyph i.on:nth-child(5) {
+  height: 12px;
+}
+
+.code {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.reduced-motion *,
+.reduced-motion *::before,
+.reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}

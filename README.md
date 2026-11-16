@@ -1,123 +1,124 @@
 # Plyo
 
-A lightweight hub of casual games you can play against a bot, with a friend on the same device, or online.
+Plyo is a set of quick head-to-head games. You can play against a bot, against a friend on the same device, or online. It ships as a **web app** (desktop-first, responsive) and a dedicated **mobile app** (portrait-first, packaged for Android and iOS with Capacitor). Both run on one shared game engine, one 3D hand system and one design system.
 
-The first game is **Hand Cricket**: a digital take on the playground game, played with a stylised 3D hand that can show all 32 finger combinations.
+The first game is **Hand Cricket**, played with a rigged 3D hand.
 
 ## Hand Cricket
 
-Every ball, the batter and the bowler each choose which fingers to raise, in secret. Both hands are revealed at the same moment.
+Every ball, the batter and the bowler each choose a hand in secret, then both hands are revealed together. Fingers are always read in the order **thumb, index, middle, ring, little**: `1` means raised, `0` means folded. That gives exactly 32 hands.
 
-- **Runs:** closed fist `00000` = 0, thumb only `10000` = **6**, any other hand = one run per raised finger (so all five, `11111`, = 5).
-- **Out:** only when the bowler's hand is **exactly** the batter's hand, finger for finger. Two different four-finger hands (`01111` vs `11101`) are *not out*; the batter scores 4.
-- **Match:** coin toss, then two innings with one wicket each and 2, 5 or 10 overs a side. The chasing side wins by passing the target. Equal scores are a tie.
+| Hand | Runs |
+|---|---:|
+| Closed fist `00000` | 0 |
+| Thumb only `10000` (the thumbs-up) | **6** |
+| Any other single finger | 1 |
+| Any two / three / four fingers | 2 / 3 / 4 |
+| All five `11111` | 5 |
 
-Fingers are always written in the order **thumb, index, middle, ring, little**, where `1` is raised and `0` is folded.
+### OUT rules
 
-### Modes
+You choose the OUT rule before every match. It is then locked until the match ends. Scoring and OUT detection are separate code (`packages/engine/src/gestures.ts` for scoring, `rules.ts` for OUT detection).
 
-| Mode | What it is |
-|---|---|
-| Play the bot | Easy, medium or hard. The bot commits to its hand before you choose, and only ever sees hands already revealed. Medium and hard learn your habits (frequency plus what you tend to play next). |
-| Pass & play | Two players on one device. Each player picks behind a hand-off screen, then both hands are revealed together. |
-| Play online | Create a room, share the 5-character code or invite link, ready up, and play on two devices through the Plyo server. |
+- **Exact match:** the batter is out only when the bowler shows the identical hand, finger for finger. `01111` against `11101` is **not out** (the batter scores 4). `01111` against `01111` is **out**.
+- **Finger count:** the batter is out when both hands show the same *number* of raised fingers. `01111` against `11101` is **out**. Thumb only is the exception, because it is the six. Only another thumb-only hand gets it out, and a thumb-only bowl never dismisses a single non-thumb finger (and the reverse).
 
-### Features
+In online matches the host proposes the rule. Changing it clears both players' ready status, so the toss only starts once both players have readied up under the rule on screen.
 
-- Procedurally modelled 3D right hand (Three.js), with no image assets. It is shown palm-down with the back of the hand to the camera, hovering over a cricket pitch. Each digit has its own joints and moves on a damped spring, so one model covers all 32 gestures.
-- Tap fingers directly on your 3D hand, use the on-screen finger buttons, or press keys `1`–`5` (thumb to little) and `Enter`.
-- Countdown with fist pumps, a simultaneous reveal, and animations for runs, sixes and wickets. Manual-scoreboard tiles flip when the score changes.
-- Synthesised sound effects (Web Audio) with a mute button. Optional vibration. A reduced-motion setting that follows the device by default.
-- Profile with name, hand skin tone, right or left hand, and career stats per mode, stored on the device.
-- A rules screen with an interactive OUT example and all 32 hands. It is shown before your first match.
-- Online play: an authoritative server that never sends a hand before both players lock in. It also has:
-  - a 30-second shot clock
-  - a 45-second reconnect window (the match resumes after a dropped connection or a page reload)
-  - clear messages when a match is abandoned
-  - rematches
+### Match
+
+A coin toss decides who chooses to bat or bowl first. Each side gets the same overs (2, 5 or 10, six balls each) and one wicket. The first innings total plus one is the target. Reach it and you win; fall short and the side that batted first wins; equal scores are a tie.
+
+### Ways to play
+
+| | Web | Mobile |
+|---|---|---|
+| vs bot (easy, medium, hard; the bot picks before you do and learns your habits) | ✓ | ✓ |
+| Pass the device (each player picks in secret behind a hand-off screen) | ✓ | ✓ |
+| Face to face (phone flat between two players; both tap ready, then three seconds to set fingers) | — | ✓ |
+| Online rooms (code or link, rule agreement, 30 s shot clock, 45 s reconnect window, rematches) | ✓ | ✓ |
+
+## The 3D hand
+
+- One skinned, single-mesh right hand with a 25-joint rig. Its forward kinematics are computed in code (`packages/hand3d/src/HandRig.ts`), so each digit bends through its own joints. Every joint rotation carries the rest of the digit with it.
+- The default pose is palm down towards the pitch, back of the hand to the camera, fingers extended away from the wrist. Each digit springs between an extended and a folded pose, so all 32 gestures come from the same rig.
+- **The six (`10000`) has its own dedicated pose.** The hand closes into a fist with the thumb held straight up and the joint at the thumb's tip locked straight. The forearm rolls 90° so the thumb side is on top, the wrist lifts slightly, and the arm turns so the back of the thumb and its nail face the viewer. This was checked from the gameplay camera on desktop and phone.
+- Fingernails are added meshes attached to the tip bones. The thumbnail's direction and depth are measured from the mesh itself.
+- The opponent's wrist is lifted slightly so their fingers, which point at the camera, stay readable.
+- Hand-art credit: the base mesh is the WebXR “generic-hand” model (MIT licence, see `packages/hand3d/src/assets/LICENSE-webxr-hand.md`). The posing, nails, forearm, sleeves, materials and lighting are Plyo's. The lobby key art is rendered from this same rig.
 
 ## Getting started
 
-Requires **Node.js 20+**.
+You need **Node.js 20 or newer**.
 
 ```bash
 npm install
-npm run dev
+npm run dev          # web app on http://localhost:5173 + game server on :8787
+npm run dev:mobile   # mobile app in the browser on http://localhost:5174 + game server
 ```
 
-`npm run dev` starts both the web app (Vite, http://localhost:5173) and the multiplayer server (port 8787). Vite proxies `/ws` to the server, so online play works locally.
+Open the mobile app on a phone on the same network at `http://<your-computer-ip>:5174`.
 
-To try online play on two devices on your network, open `http://<your-computer-ip>:5173` on the second device.
+### Building the mobile app (Android / iOS)
+
+The native projects are in `apps/mobile/android` and `apps/mobile/ios`.
+
+```bash
+npm run mobile:android   # builds the mobile web bundle, syncs it, opens Android Studio
+npm run mobile:ios       # same for Xcode (macOS only)
+```
+
+Then press **Run** in Android Studio or Xcode. The installed app has no same-origin server, so for online play either set the server address in the app's **Settings** (for example `wss://plyo.example.com/ws`), or bake it in at build time with `VITE_PLYO_SERVER=wss://…/ws npm run mobile:android`.
 
 ### Scripts
 
 | Command | Purpose |
 |---|---|
-| `npm run dev` | App and multiplayer server with hot reload |
-| `npm run dev:web` | App only (online mode will report that the server is unreachable) |
-| `npm run server` | Multiplayer server only |
-| `npm test` | Unit and integration tests (Vitest) |
-| `npm run lint` | ESLint |
-| `npm run typecheck` | TypeScript project check |
-| `npm run build` | Type-check and build the web app to `dist/` |
-| `npm start` | Build, then serve the app and WebSocket from one Node process on `PORT` (default 8787) |
+| `npm run dev` / `npm run dev:mobile` | Web or mobile app, plus the game server, with hot reload |
+| `npm run server` | Game server only |
+| `npm test` | Engine, rules, bot, rooms and end-to-end server tests (Vitest) |
+| `npm run lint` / `npm run typecheck` | ESLint / TypeScript |
+| `npm run build` | Typecheck and build both apps |
+| `npm start` | Build the web app and serve it with the game server from one process on `PORT` |
+| `npm run visual` | Screenshot smoke test of both apps (`CHROME_PATH=…`, dev servers running) |
 
-### Deploying
+Dev-only pages: `http://localhost:5173/lab.html?p=10000&o=01111` renders any pair of hands. `keyart.html` renders the lobby art.
 
-`npm start` serves everything from a single process: static files from `dist/`, the game socket at `/ws`, and `/health` for health checks. Any Node host that supports WebSockets works. If the app is hosted separately from the server, set the server address in **Settings → Online** (for example `wss://your-server/ws`). You can also restrict browser origins with `PLYO_ORIGINS=https://your-site.example`.
+## Deploying
+
+`npm start` serves the web app, the WebSocket at `/ws` and `/health` from a single Node process. Any host with WebSocket support works.
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `PORT` | `8787` | HTTP and WebSocket port |
-| `PLYO_ORIGINS` | *(any)* | Comma-separated list of allowed browser origins |
+| `PLYO_ORIGINS` | any | Comma-separated list of allowed browser origins |
+| `PLYO_DIST` | `apps/web/dist` | Static files to serve |
 
-No secrets or API keys are needed.
+No secrets, API keys or paid services are involved.
 
 ## Project structure
 
 ```
-src/
-  App.tsx                    App shell routing (hash routes)
-  platform/                  Shared, game-agnostic services
-    games.ts                 Game registry: the lobby only sees metadata; games load lazily
-    router.ts  store.ts      Tiny hash router and localStorage-backed stores
-    prefs.ts  profile.ts     Settings and player profile/stats
-    sound.ts                 Synthesised sound effects
-  shell/                     Layout, tab bar, icons, form controls
-  screens/                   Lobby, Profile, Settings
-  styles/global.css          Design tokens and shared components
-  games/hand-cricket/
-    HandCricketGame.tsx      Module entry: owns every #/hand-cricket route
-    engine/                  Pure TypeScript, shared by browser and server
-      gestures.ts            32 gestures, scoring, exact-match OUT rule
-      match.ts               Match reducer: toss, innings, overs, target, result
-      ai.ts                  Bot opponent (easy, medium, hard)
-    hand/                    3D hand model and stage (Three.js)
-    ui/                      Match view, finger picker, scoreboard, toss, result, rules
-    modes/                   Bot, pass & play and online controllers
-    net/                     Wire protocol and reconnecting WebSocket client
-server/
-  index.ts                   HTTP + WebSocket server
-  rooms.ts                   Rooms, toss, simultaneous reveal, timeouts, reconnects
-tests/                       Engine, bot, room and end-to-end server tests
-dev/lab.html                 Hand lab for development: /dev/lab.html?p=01111&o=11101
+packages/
+  engine/    @plyo/engine   gestures and scoring, OUT rules, match reducer, bot, wire protocol (pure TS)
+  hand3d/    @plyo/hand3d   rigged hand, poses, six pose, stage, camera presets (Three.js)
+  core/      @plyo/core     prefs, profile, sound, haptics adapter, router, net client,
+                            match sessions (bot / pass / face to face / online), shared UI pieces
+             @plyo/core/arena  React glue for the 3D stage (loaded only with match screens)
+  tokens/    @plyo/tokens   design tokens and original artwork
+apps/
+  web/       desktop-first web app (Vite + React)
+  mobile/    portrait mobile app (Vite + React) with Capacitor android/ and ios/ projects
+server/      authoritative WebSocket game server (runs the same engine)
+tests/       Vitest suites
+config/      shared module aliases
 ```
 
-### Adding a game
-
-1. Create `src/games/<id>/` with a default-exported component that takes `{ route }`.
-2. Register it in `src/platform/games.ts` with `status: 'playable'` and a lazy `Component`.
-
-The lobby, navigation, profile and settings need no changes. Shared pieces (sound, preferences, stats, scoreboard tiles, buttons) live in `platform/`, `shell/` and `styles/`.
-
-## Dependencies
-
-Runtime: `react`, `react-dom`, `three` (3D hand), `ws` (multiplayer server), `tsx` (runs the TypeScript server), and `@fontsource-variable/big-shoulders-display` and `@fontsource-variable/instrument-sans` (self-hosted fonts).
-
-Development: `vite`, `@vitejs/plugin-react`, `typescript`, `vitest`, `eslint`, `typescript-eslint`, `eslint-plugin-react-hooks`, `concurrently`, `cross-env`, and type packages.
-
-Everything is free and open source. No paid services are used.
+To add a game, put its rules in a new engine module, register its metadata in `packages/core/src/games.ts`, and give each app its own screens for it. The lobby, navigation, profiles and settings need no changes.
 
 ## Status
 
-Not yet built: the other games shown in the lobby (Odd or Even, Paper Duel, Dots & Boxes) are marked "Coming soon" and can't be opened. Online play has no accounts or matchmaking. You play friends by room code, and stats are stored per device.
+- Hand Cricket is complete on web and mobile in every mode listed above.
+- Odd or Even, Paper Duel and Dots & Boxes are shown as “in development” and can't be opened.
+- The Android and iOS projects are generated and configured (portrait lock, haptics, status bar), but they have not been compiled into an APK or IPA from this repository's CI. Build them with Android Studio or Xcode as described above. The app icon is still Capacitor's default.
+- Online play has no accounts or matchmaking: friends join by room code. Stats are stored on each device.
